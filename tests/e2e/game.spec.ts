@@ -10,6 +10,7 @@ test("first paint, actual keyboard movement, independent aim, fire, guide and pa
   ).toBeVisible();
   await page.screenshot({ path: "docs/screenshots/01-title.png" });
   await page.getByRole("button", { name: "Begin rescue" }).click();
+  await expect(page.locator('#menu')).toBeHidden();
   await page.waitForTimeout(300);
   await page.keyboard.down("KeyD");
   await page.waitForTimeout(450);

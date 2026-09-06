@@ -59,7 +59,7 @@ canvas {
 #menu.hidden {
   display: none;
 }
-#menu:not(.title) {
+#menu:not(.title):not(.hidden) {
   display: grid;
   place-items: center;
   background: rgba(5, 27, 36, 0.82);

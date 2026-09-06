@@ -1,5 +1,10 @@
 # BRINEWAKE — implementation and playtest evidence
 
+## Alpha start-screen hotfix
+
+The published alpha exposed a CSS cascade bug: `#menu:not(.title)` overrode the hidden menu's `display:none`, leaving the title overlay over a running game. Restricted the panel selector to non-hidden menus. `scripts/check-start.mjs` reproduced the failure against the original live build, then passed locally after the fix (start and pause/resume, zero page errors). The real Chromium first-paint/keyboard-movement/aim/fire/guide/pause test also passed locally. All 82 unit tests and production build passed. The earlier blocked-environment notes below are historical; full browser campaign verification remains outstanding.
+
+
 Updated 2026-09-06. This log distinguishes executed checks from authored tests and blocked verification. **The complete campaign passed in the deterministic simulation; real browser gameplay, screenshot inspection, audio listening and physical controller play have not been completed.**
 
 ## Executed results

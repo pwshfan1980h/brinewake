@@ -1,0 +1,11 @@
+
+> brinewake@1.0.0 test:e2e
+> playwright test --list
+
+Listing tests:
+  game.spec.ts:2:1 › first paint, actual keyboard movement, independent aim, fire, guide and pause
+  game.spec.ts:50:1 › full campaign: keyboard/mouse only, water in every chapter, every boss phase and victory
+  game.spec.ts:132:1 › synthetic standard gamepad: menus, shoulder jet, twin-stick strafe, trigger fire, disconnect pause
+  game.spec.ts:190:1 › settings persist, keyboard-only guide navigation, resize and nested-path production assets
+  game.spec.ts:219:1 › takes real enemy damage, repairs, loses hull and restarts at a valid checkpoint
+Total: 5 tests in 1 file

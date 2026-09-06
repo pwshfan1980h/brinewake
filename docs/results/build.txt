@@ -1,0 +1,19 @@
+
+> brinewake@1.0.0 build
+> tsc --noEmit && vite build && node scripts/offline.mjs
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 28 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.59 kB │ gzip:   0.36 kB
+dist/assets/index-Cfa_NKzd.css   10.27 kB │ gzip:   3.03 kB
+dist/assets/index-CDTH9sdg.js   558.17 kB │ gzip: 147.86 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 391ms
+Wrote dist/BRINEWAKE.html (self-contained offline build)

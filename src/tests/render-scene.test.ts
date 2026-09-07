@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import * as THREE from "three";
 import { World } from "../render/World";
 import { Campaign } from "../sim/campaign";
-import { disposeTree } from "../render/kit";
+import { disposeTree, mats } from "../render/kit";
 // Exercise procedural geometry, batching, dynamic exclusions and resource transitions.
 // This deliberately does not pretend to validate WebGL shaders or browser pixels.
 afterEach(() => vi.unstubAllGlobals());
@@ -52,6 +52,35 @@ describe("original procedural scenery", () => {
       expect(!!w.bossModel).toBe(level === 2);
       for (const m of w.enemyModels.values())
         expect(m.userData.gun.parent).toBe(m);
+      disposeTree(w.stage);
+    },
+  );
+  it.each([0, 1, 2])(
+    "gives every chapter %i walking plane a single cap, not coplanar body faces",
+    (level) => {
+      const w = sceneBuilder(),
+        g = new Campaign(level);
+      w.load(g);
+      w.stage.updateMatrixWorld(true);
+      for (const p of g.level.platforms) {
+        const ray = new THREE.Raycaster(
+          new THREE.Vector3(p.x + p.w * 0.43, p.y + 0.3, 0),
+          new THREE.Vector3(0, -1, 0),
+        );
+        const hits = ray
+          .intersectObject(w.stage, true)
+          .filter(
+            (h) =>
+              h.face!.normal.y > 0.9 &&
+              Math.abs(h.point.y - p.y) < 1e-5 &&
+              [mats.dark, mats.copper].includes(
+                (h.object as THREE.Mesh).material as THREE.MeshStandardMaterial,
+              ),
+          );
+        expect(
+          new Set(hits.map((h) => (h.object as THREE.Mesh).material)),
+        ).toEqual(new Set([mats.copper]));
+      }
       disposeTree(w.stage);
     },
   );

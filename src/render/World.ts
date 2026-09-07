@@ -171,13 +171,16 @@ export class World {
     buildCoast(this.stage, l, g.index);
     for (const b of l.platforms) {
       const top = b.y;
+      // The cap alone owns the physics top. Recess the structural body below
+      // it: coincident upward faces flicker as the camera's depth rounding moves.
+      const capHeight = 0.2;
       box(
         this.stage,
         b.x + b.w / 2,
-        top - b.h / 2,
+        top - (b.h + capHeight) / 2,
         -0.15,
         b.w,
-        b.h,
+        b.h - capHeight,
         2.8,
         mats.dark,
       );

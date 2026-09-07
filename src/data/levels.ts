@@ -10,8 +10,8 @@ export const levels: Level[] = [
     spawn: { x: 4, y: 1 },
     exit: { x: 90, y: 1 },
     palette: {
-      sky: "#b98586",
-      fog: "#527c81",
+      sky: "#101e36",
+      fog: "#283d50",
       water: "#187f91",
       accent: "#ffb77f",
     },
@@ -52,8 +52,8 @@ export const levels: Level[] = [
     spawn: { x: 4, y: 1 },
     exit: { x: 101, y: 11.5 },
     palette: {
-      sky: "#79a6a1",
-      fog: "#3c767d",
+      sky: "#101f30",
+      fog: "#233d49",
       water: "#189c9d",
       accent: "#f0c375",
     },
@@ -97,8 +97,8 @@ export const levels: Level[] = [
     spawn: { x: 4, y: 1 },
     exit: { x: 110, y: 1 },
     palette: {
-      sky: "#252e52",
-      fog: "#234658",
+      sky: "#090f22",
+      fog: "#192b40",
       water: "#176982",
       accent: "#dfb374",
     },

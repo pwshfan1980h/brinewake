@@ -1,18 +1,14 @@
-# Screenshot status
+# Screenshot evidence
 
-**No screenshots have been captured yet.** Server binding and headless Chromium startup were blocked by the environment; browser URL policy blocked the offline file URL. See `../PLAYTEST.md`.
+These are real Chromium captures, not intended output paths. The initial implementation worker's browser restrictions no longer prevent capture.
 
-The Playwright suite is configured to save these real browser captures when it can run:
+- `01-title.png`, `02-quay-jet.png`: title and active movement/jet.
+- `campaign-level0.png` through `campaign-level2.png`: full campaign browser driver.
+- `campaign-water0.png` through `campaign-water2.png`: campaign water regions.
+- `campaign-boss0.png` through `campaign-boss2.png`, `10-victory.png`: boss phases and campaign victory.
+- `11-synthetic-gamepad.png`: emulated controller, not physical hardware evidence.
+- `12-compact-viewport.png`: compact layout.
+- `13-field-patch.png`, `14-hull-offline.png`: recovery and defeat.
+- `presentation/`: isolated saved-checkpoint fixtures for art inspection, walking, missile and torpedo. These are not campaign-completion evidence. `presentation/before/` retains the preceding visual baseline.
 
-- `01-title.png`
-- `02-quay-jet.png`
-- `campaign-level0.png`, `campaign-level1.png`, `campaign-level2.png`
-- `campaign-water0.png`, `campaign-water1.png`, `campaign-water2.png`
-- `campaign-boss0.png`, `campaign-boss1.png`, `campaign-boss2.png`
-- `10-victory.png`
-- `11-synthetic-gamepad.png` (emulation, never physical verification)
-- `12-compact-viewport.png`
-- `13-field-patch.png`
-- `14-hull-offline.png`
-
-These are intended output paths, not existing screenshots. The game has no pre-rendered image masquerading as a runtime capture.
+See `../PRESENTATION-ALPHA.md` for test results and remaining limits. New test runs can refresh captures; screenshot existence alone does not establish that a test passed.

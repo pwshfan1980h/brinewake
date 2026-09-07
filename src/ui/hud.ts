@@ -3,7 +3,7 @@ import { tutorialSteps } from "./tutorial";
 export class HUD {
   root: HTMLElement;
   labels: HTMLElement;
-  timer = 0;
+  private labelNodes = new Map<string, HTMLElement>();
   constructor() {
     this.root = document.createElement("div");
     this.root.id = "hud";
@@ -21,7 +21,7 @@ export class HUD {
     device: string,
     visible: boolean,
     project: (x: number, y: number) => { x: number; y: number },
-    dt: number,
+    _dt: number,
   ) {
     this.root.hidden = !visible;
     this.labels.hidden = !visible;
@@ -91,10 +91,28 @@ export class HUD {
               : "TARGETING SWEEP · CHANGE ELEVATION"
             : "BRACED HULL · EVADE THE VOLLEY";
     }
-    this.timer -= dt;
-    if (this.timer <= 0) {
-      this.timer = 0.08;
-      this.labels.innerHTML = "";
+    // Projection belongs to the rendered camera frame, never a slower HUD timer.
+    // Keep nodes stable so movement does not continually rebuild/rasterize text.
+    const seen = new Set<string>();
+    const place = (
+      key: string,
+      className: string,
+      html: string,
+      s: { x: number; y: number },
+    ) => {
+      seen.add(key);
+      let node = this.labelNodes.get(key);
+      if (!node) {
+        node = document.createElement("div");
+        this.labelNodes.set(key, node);
+        this.labels.append(node);
+      }
+      node.className = className;
+      node.style.left = s.x + "px";
+      node.style.top = s.y + "px";
+      if (node.innerHTML !== html) node.innerHTML = html;
+    };
+    {
       for (const [index, o] of g.objectives.entries()) {
         const sequenceReady = g.objectives.slice(0, index).every((o) => o.done);
         const s = project(o.x, o.y + 2.8);
@@ -103,31 +121,29 @@ export class HUD {
         const threat = g.enemies.some(
           (e) => e.hp > 0 && Math.hypot(e.x - o.x, e.y - o.y) < 11,
         );
-        const label = document.createElement("div");
-        label.className = "objective-label" + (o.done ? " done" : "");
-        label.style.left = s.x + "px";
-        label.style.top = s.y + "px";
-        label.innerHTML = `<b>${o.done ? "✓" : near ? (threat ? "⚠" : "⌁") : "◇"} ${o.name}</b><span>${o.done ? "ROUTE ONLINE" : near ? (!sequenceReady ? "RESTORE PREVIOUS RELAY" : threat ? "CLEAR NEARBY DEFENSE UNITS" : `HOLD ${device === "gamepad" ? "X" : "F"} TO RESTORE`) : `${Math.round(Math.hypot(p.x - o.x, p.y - o.y))} m`}</span>${near && !o.done ? `<i style="width:${o.progress * 100}%"></i>` : ""}`;
-        this.labels.append(label);
+        const html = `<b>${o.done ? "✓" : near ? (threat ? "⚠" : "⌁") : "◇"} ${o.name}</b><span>${o.done ? "ROUTE ONLINE" : near ? (!sequenceReady ? "RESTORE PREVIOUS RELAY" : threat ? "CLEAR NEARBY DEFENSE UNITS" : `HOLD ${device === "gamepad" ? "X" : "F"} TO RESTORE`) : `${Math.round(Math.hypot(p.x - o.x, p.y - o.y))} m`}</span>${near && !o.done ? `<i style="width:${o.progress * 100}%"></i>` : ""}`;
+        place(
+          `objective-${g.index}-${index}`,
+          "objective-label" + (o.done ? " done" : ""),
+          html,
+          s,
+        );
       }
       for (const e of g.enemies) {
         if (e.hp <= 0 || Math.abs(e.x - p.x) > 16) continue;
         const s = project(e.x, e.y + 1.3);
-        const d = document.createElement("div");
-        d.className = "enemy-label";
-        d.style.left = s.x + "px";
-        d.style.top = s.y + "px";
-        d.innerHTML = `<span>${e.tell > 0 ? "! WINDUP" : e.kind.toUpperCase()}</span><i><em style="width:${(e.hp / e.maxHp) * 100}%"></em></i>`;
-        this.labels.append(d);
+        const html = `<span>${e.tell > 0 ? "! WINDUP" : e.kind.toUpperCase()}</span><i><em style="width:${(e.hp / e.maxHp) * 100}%"></em></i>`;
+        place(`enemy-${g.index}-${e.id}`, "enemy-label", html, s);
       }
       if (g.objectives.every((o) => o.done) && !g.boss) {
         const s = project(g.level.exit.x, g.level.exit.y + 5);
-        const d = document.createElement("div");
-        d.className = "objective-label done";
-        d.style.left = s.x + "px";
-        d.style.top = s.y + "px";
-        d.textContent = "ROUTE OPEN →";
-        this.labels.append(d);
+        place("exit", "objective-label done", "ROUTE OPEN →", s);
+      }
+    }
+    for (const [key, node] of this.labelNodes) {
+      if (!seen.has(key)) {
+        node.remove();
+        this.labelNodes.delete(key);
       }
     }
   }

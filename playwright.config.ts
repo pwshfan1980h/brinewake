@@ -7,7 +7,7 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://127.0.0.1:4174",
+    baseURL: "http://127.0.0.1:4175",
     viewport: { width: 1440, height: 900 },
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
@@ -17,7 +17,7 @@ export default defineConfig({
   },
   webServer: {
     command: "node scripts/serve-test.mjs",
-    url: "http://127.0.0.1:4174",
-    reuseExistingServer: true,
+    url: "http://127.0.0.1:4175",
+    reuseExistingServer: false,
   },
 });

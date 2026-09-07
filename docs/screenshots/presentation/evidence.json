@@ -8,10 +8,10 @@
       "voices": 1
     },
     "render": {
-      "fps": 11,
-      "frameMs": 93.30352972467261,
-      "calls": 116,
-      "geometries": 118
+      "fps": 14,
+      "frameMs": 71.27681931278381,
+      "calls": 119,
+      "geometries": 121
     }
   },
   {
@@ -23,10 +23,10 @@
       "voices": 0
     },
     "render": {
-      "fps": 16,
-      "frameMs": 62.44910381865826,
-      "calls": 118,
-      "geometries": 127
+      "fps": 22,
+      "frameMs": 45.39828074072255,
+      "calls": 120,
+      "geometries": 129
     }
   },
   {
@@ -38,10 +38,10 @@
       "voices": 0
     },
     "render": {
-      "fps": 16,
-      "frameMs": 60.968564694563476,
-      "calls": 113,
-      "geometries": 119
+      "fps": 22,
+      "frameMs": 44.50856447042552,
+      "calls": 115,
+      "geometries": 121
     }
   }
 ]

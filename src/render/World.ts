@@ -4,6 +4,8 @@ import { cameraFrame } from "./camera";
 import { Mech } from "./Mech";
 import { box, cylinder, sphere, beam, label, mats, disposeTree } from "./kit";
 import { Effects } from "./effects";
+import { buildCoast } from "./coast";
+import { Missiles } from "./missiles";
 import type { Campaign } from "../sim/campaign";
 import type { Enemy, Input, Level } from "../sim/types";
 import type { Settings } from "../input/InputManager";
@@ -21,6 +23,7 @@ export class World {
   moving: T.Object3D[] = [];
   waterMats: T.ShaderMaterial[] = [];
   shots: T.InstancedMesh;
+  missiles: Missiles;
   dummy = new T.Object3D();
   reticle = new T.Group();
   bossModel?: T.Group;
@@ -72,6 +75,7 @@ export class World {
     fill.position.set(2, 5, -10);
     this.scene.add(fill);
     this.effects = new Effects(this.scene);
+    this.missiles = new Missiles(this.scene);
     this.shots = new T.InstancedMesh(
       new T.SphereGeometry(1, 6, 4),
       new T.MeshBasicMaterial(),
@@ -158,98 +162,13 @@ export class World {
     this.lastLevel = g.index;
     const l = g.level;
     this.scene.background = new T.Color(l.palette.sky);
-    this.scene.fog = new T.Fog(l.palette.fog, 34, 115);
+    this.scene.fog = new T.Fog(l.palette.fog, 42, 125);
     this.cx = g.player.x + 7;
     this.cy = 3;
     this.skyLight.color.set(
       g.index === 0 ? 0xffc292 : g.index === 1 ? 0xd0ffe6 : 0x859eda,
     );
-    // Monumental distant city; deterministic skyline, no borrowed models or textures.
-    for (let n = 0; n < 42; n++) {
-      const x = n * 4 - 18,
-        h = 4 + (Math.sin(n * 31.4) * 0.5 + 0.5) * 11;
-      box(
-        this.stage,
-        x,
-        h / 2 - 3,
-        -35 - (n % 3) * 4,
-        2.7,
-        h,
-        3,
-        new T.MeshStandardMaterial({
-          color: new T.Color(l.palette.fog).multiplyScalar(
-            0.7 + (n % 4) * 0.05,
-          ),
-        }),
-      );
-      for (let j = 0; j < 4; j++)
-        box(
-          this.stage,
-          x - 0.7 + j * 0.45,
-          1 + (n % 5),
-          -33.3,
-          0.12,
-          0.45,
-          0.02,
-          mats.gold,
-        );
-    }
-    if (g.index === 0) {
-      const sun = sphere(
-        this.stage,
-        24,
-        14,
-        -62,
-        5.5,
-        new T.MeshBasicMaterial({ color: 0xffd3b0 }),
-      );
-      sun.scale.z = 0.15;
-    }
-    for (let n = 0; n < 18; n++) {
-      const cloud = sphere(
-        this.stage,
-        n * 9 - 10,
-        13 + (n % 4) * 1.7,
-        -45 - (n % 3) * 5,
-        2.5,
-        new T.MeshBasicMaterial({
-          color: g.index === 2 ? 0x434763 : 0xd0aca0,
-          transparent: true,
-          opacity: 0.24,
-        }),
-      );
-      cloud.scale.set(3, 0.25, 1);
-    }
-    // Seaward plane and fine horizontal reflection ribbons.
-    box(
-      this.stage,
-      l.length / 2,
-      -4,
-      -17,
-      l.length + 60,
-      0.1,
-      35,
-      new T.MeshStandardMaterial({
-        color: l.palette.water,
-        metalness: 0.7,
-        roughness: 0.25,
-      }),
-    );
-    for (let n = 0; n < 70; n++)
-      box(
-        this.stage,
-        n * 2 - 20,
-        -3.92,
-        -7 - (n % 7) * 3,
-        0.4 + (n % 5),
-        0.02,
-        0.06,
-        new T.MeshBasicMaterial({
-          color: l.palette.accent,
-          transparent: true,
-          opacity: 0.17,
-        }),
-      );
+    buildCoast(this.stage, l, g.index);
     for (const b of l.platforms) {
       const top = b.y;
       box(
@@ -362,7 +281,11 @@ export class World {
     }
     for (let x = 3; x < l.length; x += 8) {
       const lamp = new T.Group();
-      lamp.position.set(x, 0, -2);
+      const support = l.platforms.find(
+        (b) => !b.oneWay && x >= b.x && x <= b.x + b.w,
+      );
+      if (!support) continue;
+      lamp.position.set(x, support.y, -1.1);
       this.stage.add(lamp);
       cylinder(lamp, 0, 2.8, 0, 0.06, 5.6, mats.steel);
       box(lamp, 0.32, 5.6, 0, 0.7, 0.1, 0.1, mats.copper);
@@ -395,8 +318,8 @@ export class World {
       }
     }
     // Landmarks distinguish the chapters: cranes / planted pumpworks / turbines.
-    for (let n = 0; n < 5; n++) {
-      const x = 12 + n * 23;
+    for (let n = 0; n < 4; n++) {
+      const x = 16 + n * 28;
       if (g.index === 0) this.crane(x);
       else if (g.index === 1) this.pump(x);
       else this.turbine(x);
@@ -468,7 +391,7 @@ export class World {
     // Original small evacuation boats and passenger silhouettes behind the route.
     for (let n = 0; n < 3; n++) {
       const boat = new T.Group();
-      boat.position.set(16 + n * 29, -2.5, -8);
+      boat.position.set(16 + n * 29, -3.65, -8);
       this.stage.add(boat);
       box(boat, 0, 0, 0, 5, 0.45, 1.3, mats.cream);
       box(boat, 1, 0.65, 0, 1.4, 1, 0.9, mats.orange);
@@ -488,8 +411,11 @@ export class World {
           : "CROWN / 09",
       "#ebdabc",
     );
-    title.position.set(7, 3, -3);
-    title.scale.setScalar(1.8);
+    box(this.stage, 7, 2.7, -3.2, 5.2, 1.1, 0.12, mats.dark);
+    for (const x of [4.8, 9.2])
+      cylinder(this.stage, x, 1.35, -3.2, 0.045, 2.7, mats.copper);
+    title.position.set(7, 2.7, -3.1);
+    title.scale.setScalar(1.1);
     this.stage.add(title);
     this.batchStatic();
   }
@@ -508,7 +434,8 @@ export class World {
       if (
         !(o instanceof T.Mesh) ||
         Array.isArray(o.material) ||
-        !Object.values(mats).includes(o.material)
+        o.material instanceof T.ShaderMaterial ||
+        !!(o.material as T.MeshBasicMaterial).map
       )
         return;
       let a: T.Object3D | null = o;
@@ -541,34 +468,49 @@ export class World {
   }
   crane(x: number) {
     const g = new T.Group();
-    g.position.set(x, 0, -12);
+    g.position.set(x, -0.5, -13);
     this.stage.add(g);
-    for (const s of [-1, 1])
+    const steel = new T.MeshStandardMaterial({
+      color: 0x697c7a,
+      roughness: 0.85,
+    });
+    const paint = new T.MeshStandardMaterial({
+      color: 0x9c8063,
+      roughness: 0.85,
+    });
+    box(g, 0, 0.15, 0, 5, 0.3, 3, steel);
+    for (const s of [-1, 1]) {
       beam(
         g,
-        new T.Vector3(s * 1.5, 0, 0),
-        new T.Vector3(s * 0.5, 10, 0),
-        0.32,
-        mats.copper,
+        new T.Vector3(s * 1.8, 0.3, 0),
+        new T.Vector3(s * 0.7, 6, 0),
+        0.22,
+        paint,
       );
-    box(g, 2, 10, 0, 13, 0.25, 0.5, mats.orange);
-    box(g, 0, 9.3, 0.5, 2, 1.2, 1.5, mats.steel);
-    for (let n = 0; n < 6; n++)
+      box(g, s * 1.8, 0.35, 0, 0.8, 0.4, 1.8, steel);
+    }
+    beam(g, new T.Vector3(-1.4, 2, 0), new T.Vector3(1, 4.8, 0), 0.1, steel);
+    beam(g, new T.Vector3(1.4, 2, 0), new T.Vector3(-1, 4.8, 0), 0.1, steel);
+    box(g, 1.8, 6, 0, 10, 0.2, 0.5, paint);
+    box(g, 1.8, 6.9, 0, 10, 0.12, 0.3, steel);
+    for (let n = 0; n < 10; n++)
       beam(
         g,
-        new T.Vector3(n * 2 - 4, 10, 0),
-        new T.Vector3(n * 2 - 3, 11.2, 0),
-        0.08,
-        mats.copper,
+        new T.Vector3(n - 3.2, 6 + (n % 2) * 0.9, 0),
+        new T.Vector3(n - 2.2, 6 + ((n + 1) % 2) * 0.9, 0),
+        0.065,
+        steel,
       );
-    const cable = cylinder(g, 6, 6, 0, 0.025, 8, mats.dark);
-    cable.userData = { motion: "cable", base: 6 };
-    this.moving.push(cable);
-    box(g, 6, 1.8, 0, 2.5, 1.5, 2, mats.steel);
+    box(g, -0.25, 5.35, 0.3, 1.6, 1.1, 1.2, steel);
+    box(g, -0.15, 5.5, 0.92, 1.1, 0.4, 0.04, mats.dark);
+    box(g, -2.5, 5.7, 0, 1.2, 0.65, 1.2, paint);
+    // Fixed hoist endpoint meets its cargo; no detached, swinging cable segments.
+    cylinder(g, 5.4, 3.8, 0, 0.025, 4.4, steel);
+    box(g, 5.4, 0.95, 0, 2, 1.3, 1.6, steel);
   }
   pump(x: number) {
     const g = new T.Group();
-    g.position.set(x, 0, -8);
+    g.position.set(x, -0.5, -13);
     this.stage.add(g);
     for (const s of [-1, 1]) {
       cylinder(g, s * 3, 3.5, 0, 0.7, 10, mats.steel);
@@ -775,7 +717,7 @@ export class World {
         o.rotation.z += dt * (g.status === "victory" ? 0.04 : 0.2);
       else if (m === "cable") o.rotation.z = Math.sin(t * 0.5) * 0.025;
       else if (m === "boat") {
-        o.position.y = -2.5 + Math.sin(t * 1.3 + o.userData.base) * 0.12;
+        o.position.y = -3.65 + Math.sin(t * 1.3 + o.userData.base) * 0.12;
         o.position.x =
           o.userData.base + (g.transition > 0 ? (t * 0.3) % 10 : 0);
       } else if (m === "foam")
@@ -888,9 +830,11 @@ export class World {
       positions.needsUpdate = true;
       line.computeLineDistances();
     }
-    this.shots.count = Math.min(256, g.shots.length);
-    for (let n = 0; n < this.shots.count; n++) {
-      const s = g.shots[n];
+    this.missiles.update(g, this.settings.lowEffects);
+    let shotCount = 0;
+    for (const s of g.shots) {
+      if (s.kind === "pod" || shotCount >= 256) continue;
+      const n = shotCount++;
       this.dummy.position.set(s.x, s.y, 0.44);
       this.dummy.rotation.z = Math.atan2(s.vy, s.vx);
       this.dummy.scale.set(
@@ -903,16 +847,11 @@ export class World {
       this.shots.setColorAt(
         n,
         new T.Color(
-          s.friendly
-            ? s.kind === "arc"
-              ? 0x8bfff4
-              : s.kind === "pod"
-                ? 0xb7ffe6
-                : 0xffd88f
-            : 0xff6f7d,
+          s.friendly ? (s.kind === "arc" ? 0x8bfff4 : 0xffd88f) : 0xff6f7d,
         ),
       );
     }
+    this.shots.count = shotCount;
     this.shots.instanceMatrix.needsUpdate = true;
     if (this.shots.instanceColor) this.shots.instanceColor.needsUpdate = true;
     if (g.status === "victory") {

@@ -1,5 +1,6 @@
 import type { Settings } from "../input/InputManager";
 import type { GameEvent } from "../sim/types";
+import { impacts, MAX_VOICES, safetyCurve, type ImpactLayer } from "./impact";
 export class AudioEngine {
   ctx?: AudioContext;
   master?: GainNode;
@@ -11,6 +12,9 @@ export class AudioEngine {
   timer = 0;
   ambient?: OscillatorNode;
   started = false;
+  private noiseBuffer?: AudioBuffer;
+  private safety?: WaveShaperNode;
+  private controls = "";
   constructor(public settings: Settings) {}
   start() {
     if (this.ctx) {
@@ -25,7 +29,15 @@ export class AudioEngine {
       this.filter = c.createBiquadFilter();
       this.filter.type = "lowpass";
       this.filter.frequency.value = 17000;
-      this.filter.connect(this.master);
+      // Zero-latency soft saturation bounds overlapping impacts before volume.
+      this.safety = c.createWaveShaper();
+      this.safety.curve = safetyCurve();
+      this.filter.connect(this.safety);
+      this.safety.connect(this.master);
+      this.master.gain.value = 0;
+      this.noiseBuffer = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
+      const data = this.noiseBuffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
       this.sfx = c.createGain();
       this.sfx.connect(this.filter);
       this.music = c.createGain();
@@ -45,83 +57,123 @@ export class AudioEngine {
     end?: number,
     music = false,
   ) {
-    if (!this.ctx || this.voices > 28 || this.ctx.state !== "running") return;
-    const c = this.ctx,
-      o = c.createOscillator(),
-      g = c.createGain();
-    o.type = type;
-    o.frequency.setValueAtTime(freq, c.currentTime);
-    if (end)
-      o.frequency.exponentialRampToValueAtTime(
-        Math.max(20, end),
-        c.currentTime + duration,
-      );
-    g.gain.setValueAtTime(0.0001, c.currentTime);
-    g.gain.exponentialRampToValueAtTime(
-      Math.max(0.0002, volume),
-      c.currentTime + 0.012,
+    this.layer(
+      {
+        wave: type,
+        frequency: freq,
+        duration,
+        gain: volume,
+        end,
+        attack: music ? 0.012 : 0.003,
+      },
+      music,
     );
-    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + duration);
-    o.connect(g);
-    g.connect(music ? this.music! : this.sfx!);
-    o.start();
-    o.stop(c.currentTime + duration + 0.02);
-    this.voices++;
-    o.onended = () => {
-      o.disconnect();
-      g.disconnect();
-      this.voices--;
-    };
   }
   noise(duration: number, volume: number, freq = 700) {
-    if (!this.ctx || this.voices > 28) return;
-    const c = this.ctx,
-      b = c.createBuffer(1, Math.floor(c.sampleRate * duration), c.sampleRate),
-      data = b.getChannelData(0);
-    for (let n = 0; n < data.length; n++)
-      data[n] = (Math.random() * 2 - 1) * (1 - n / data.length);
-    const source = c.createBufferSource(),
-      filter = c.createBiquadFilter(),
-      gain = c.createGain();
-    source.buffer = b;
-    filter.type = "bandpass";
-    filter.frequency.value = freq;
-    gain.gain.value = volume;
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.sfx!);
-    source.start();
+    this.layer({ noise: "bandpass", frequency: freq, duration, gain: volume });
+  }
+  footstep(frequency = 100): void {
+    this.impact("footstep", Math.max(0.75, Math.min(1.25, frequency / 100)));
+  }
+  private impact(name: string, pitch = 1) {
+    const layers = impacts[name];
+    // Reserve a complete sound, not a stray transient under saturation.
+    if (!layers || this.voices + layers.length > MAX_VOICES) return;
+    const at = this.ctx?.currentTime ?? 0;
+    for (const layer of layers)
+      this.layer(
+        {
+          ...layer,
+          frequency: layer.frequency * pitch,
+          end: layer.end === undefined ? undefined : layer.end * pitch,
+        },
+        false,
+        at,
+      );
+  }
+  private layer(
+    layer: ImpactLayer,
+    music = false,
+    at = this.ctx?.currentTime ?? 0,
+  ) {
+    if (
+      !this.ctx ||
+      this.ctx.state !== "running" ||
+      this.voices >= MAX_VOICES ||
+      this.settings.mute ||
+      (music ? this.settings.music : this.settings.effects) <= 0 ||
+      !Number.isFinite(layer.duration) ||
+      layer.duration <= 0 ||
+      !Number.isFinite(layer.frequency) ||
+      layer.frequency <= 0 ||
+      !Number.isFinite(layer.gain) ||
+      layer.gain <= 0
+    )
+      return;
+    const c = this.ctx;
+    const start = at + (layer.delay ?? 0);
+    const duration = Math.min(10, layer.duration);
+    const finish = start + duration;
+    const gain = c.createGain();
+    const source = layer.noise ? c.createBufferSource() : c.createOscillator();
+    let filter: BiquadFilterNode | undefined;
+    let frequency: AudioParam;
+    if (layer.noise) {
+      const noise = source as AudioBufferSourceNode;
+      noise.buffer = this.noiseBuffer!;
+      noise.loop = true;
+      filter = c.createBiquadFilter();
+      filter.type = layer.noise;
+      filter.Q.value = layer.q ?? 0.7;
+      source.connect(filter);
+      filter.connect(gain);
+      frequency = filter.frequency;
+    } else {
+      const oscillator = source as OscillatorNode;
+      oscillator.type = layer.wave ?? "sine";
+      frequency = oscillator.frequency;
+      source.connect(gain);
+    }
+    const safeFrequency = (f: number) =>
+      Math.max(20, Math.min(c.sampleRate * 0.45, f));
+    frequency.setValueAtTime(safeFrequency(layer.frequency), start);
+    if (layer.end !== undefined && Number.isFinite(layer.end))
+      frequency.exponentialRampToValueAtTime(safeFrequency(layer.end), finish);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(
+      Math.min(0.5, layer.gain),
+      start + Math.min(layer.attack ?? 0.002, duration * 0.3),
+    );
+    gain.gain.exponentialRampToValueAtTime(0.0001, finish);
+    gain.gain.linearRampToValueAtTime(0, finish + 0.008);
+    gain.connect(music ? this.music! : this.sfx!);
     this.voices++;
     source.onended = () => {
       source.disconnect();
-      filter.disconnect();
+      filter?.disconnect();
       gain.disconnect();
+      source.onended = null;
       this.voices--;
     };
+    if (layer.noise)
+      (source as AudioBufferSourceNode).start(start, Math.random());
+    else source.start(start);
+    source.stop(finish + 0.01);
   }
   event(e: GameEvent) {
     switch (e.type) {
       case "rivet":
-        this.tone(230, 0.07, 0.07, "square", 65);
-        this.noise(0.07, 0.08, 2200);
-        break;
       case "arc":
-        this.tone(1500, 0.35, 0.12, "sawtooth", 80);
-        break;
       case "pod":
-        this.tone(140, 0.5, 0.1, "sawtooth", 650);
-        break;
       case "explosion":
+      case "land":
+        this.impact(e.type);
+        break;
       case "bossDefeat":
-        this.noise(0.65, 0.23, 220);
-        this.tone(95, 0.4, 0.14, "sine", 30);
+        this.impact("explosion", 0.8);
         break;
       case "splash":
         this.noise(0.35, 0.11, 650);
-        break;
-      case "land":
-        this.tone(85, 0.13, 0.09, "triangle", 40);
-        this.noise(0.1, 0.06, 300);
         break;
       case "dash":
         this.noise(0.25, 0.09, 1300);
@@ -155,14 +207,30 @@ export class AudioEngine {
   update(wet: boolean, intensity: number, paused: boolean, dt: number) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    this.master!.gain.setTargetAtTime(
-      this.settings.mute ? 0 : this.settings.master * (paused ? 0.35 : 1),
-      t,
-      0.1,
-    );
-    this.sfx!.gain.setTargetAtTime(this.settings.effects, t, 0.1);
-    this.music!.gain.setTargetAtTime(this.settings.music, t, 0.1);
-    this.filter!.frequency.setTargetAtTime(wet ? 850 : 17000, t, 0.25);
+    const controls = [
+      this.settings.mute,
+      this.settings.master,
+      this.settings.effects,
+      this.settings.music,
+      paused,
+      wet,
+    ].join(":");
+    // Do not append automation events at render-frame frequency.
+    if (controls !== this.controls) {
+      this.controls = controls;
+      const level = (v: number) =>
+        Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
+      this.master!.gain.setTargetAtTime(
+        this.settings.mute
+          ? 0
+          : level(this.settings.master) * (paused ? 0.35 : 1),
+        t,
+        0.1,
+      );
+      this.sfx!.gain.setTargetAtTime(level(this.settings.effects), t, 0.1);
+      this.music!.gain.setTargetAtTime(level(this.settings.music), t, 0.1);
+      this.filter!.frequency.setTargetAtTime(wet ? 850 : 17000, t, 0.25);
+    }
     if (paused) return;
     this.timer -= dt;
     if (this.timer <= 0) {

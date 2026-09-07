@@ -8,7 +8,7 @@ Early testing build. Browser polish, audio balance and physical controller behav
 
 An original, local Three.js 2.5D rescue-mech game. Restore evacuation routes across a flooded coastal city, then disable the seawall governor without destroying the seawall. All geometry, scenery, layouts, animation, story and synthesized audio were authored in this project. No Moonsec source or assets were copied or imported.
 
-The implementation includes the complete three-level campaign and has passed a normal-input deterministic campaign run. **Browser visual/gameplay QA remains blocked in the implementation environment.** See [real test results and limitations](docs/PLAYTEST.md); this is not a claim of completed browser polish verification.
+The implementation includes the complete three-level campaign. Real Chromium gameplay checks now run outside the original restricted implementation environment, including the campaign pilot. See [real test results and limitations](docs/PLAYTEST.md). This remains an alpha: subjective audio balance, hardware performance and physical controller comfort need playtesting.
 
 ## Play locally
 
@@ -32,7 +32,7 @@ Install browser binaries if necessary with `npx playwright install chromium`. To
 
 `dist/BRINEWAKE.html` is a self-contained build with inline JavaScript and CSS. It can be opened directly in browsers that permit local HTML, with no server or network assets. The normal `dist/index.html` build uses relative assets and supports hosting at a repository subpath. The alpha is published on GitHub Pages from the `gh-pages` branch. There is no backend or account requirement.
 
-The implementation environment could install cached dependencies and build, but could not bind a local server or launch Chromium. Run dev/preview/Playwright from a regular terminal outside that sandbox to finish browser QA. See the playtest log for the precise failures.
+The original worker could not bind a local server or launch Chromium; those historical restrictions no longer block the current test runner. The Playwright fixture server mounts production assets at both `/` and `/brinewake/` rather than relying on Vite's HTML fallback for a nested asset URL.
 
 ## Controls
 

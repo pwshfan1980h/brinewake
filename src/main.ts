@@ -170,13 +170,7 @@ function frame(now: number) {
     }
     footTime -= dt;
     if (footTime <= 0 && game.player.grounded && Math.abs(game.player.vx) > 1) {
-      audio.tone(
-        100 + Math.sin(game.player.walk) * 25,
-        0.06,
-        0.035,
-        "triangle",
-        40,
-      );
+      audio.footstep(100 + Math.sin(game.player.walk) * 8);
       footTime = 0.23;
     }
   }

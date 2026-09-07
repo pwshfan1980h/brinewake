@@ -1,0 +1,47 @@
+[
+  {
+    "fixture": true,
+    "level": 0,
+    "errors": [],
+    "audio": {
+      "state": "running",
+      "voices": 1
+    },
+    "render": {
+      "fps": 11,
+      "frameMs": 93.30352972467261,
+      "calls": 116,
+      "geometries": 118
+    }
+  },
+  {
+    "fixture": true,
+    "level": 1,
+    "errors": [],
+    "audio": {
+      "state": "running",
+      "voices": 0
+    },
+    "render": {
+      "fps": 16,
+      "frameMs": 62.44910381865826,
+      "calls": 118,
+      "geometries": 127
+    }
+  },
+  {
+    "fixture": true,
+    "level": 2,
+    "errors": [],
+    "audio": {
+      "state": "running",
+      "voices": 0
+    },
+    "render": {
+      "fps": 16,
+      "frameMs": 60.968564694563476,
+      "calls": 113,
+      "geometries": 119
+    }
+  }
+]

@@ -162,9 +162,12 @@ test("synthetic standard gamepad: menus, shoulder jet, twin-stick strafe, trigge
     );
     await page.waitForTimeout(80);
   };
+  // Wait for the first controller poll; an 80ms tap during scene startup can
+  // otherwise occur entirely before requestAnimationFrame begins.
+  await page.waitForFunction(() => window.__BRINEWAKE__?.snapshot().padConnected);
   await button(0, true);
-  await button(0, false);
   await expect(page.locator("#menu")).toBeHidden();
+  await button(0, false);
   await page.evaluate(() => {
     (window as any).__testPad.axes = [-0.8, 0, 0, -1];
   });
